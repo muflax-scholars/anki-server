@@ -15,7 +15,8 @@ from anki import notes, consts
 PORT = 49666
 
 class AnkiServer(object):
-    def __init__(self, port):
+    def __init__(self, mw, port):
+        self.mw = mw
         self.tcpServer = QtNetwork.QTcpServer()
         self.tcpServer.listen(address=QtNetwork.QHostAddress.LocalHost, port=port)
         QtCore.QObject.connect(self.tcpServer, QtCore.SIGNAL("newConnection()"),
@@ -33,17 +34,46 @@ class AnkiServer(object):
 
     def parseCommand(self, txt):
         # parse cmd
+        print "received:", txt
         msg = json.loads(txt)
         cmd, data = msg["cmd"], msg["data"]
 
         # execute command
         getattr(AnkiServer, cmd)(self, data)
 
-    def addNotes(self, data):
-        print data
-        
+        # no error, so send ok back
+        self.sock.write(QtCore.QByteArray("OK"))
 
-def startAnkiServer(self, port):
-    self.ankiServer = AnkiServer(port)
+    def addNote(self, data):
+        "Takes model, deck, fields, tags. If deck is missing, use current deck."
+        col = self.mw.col
+
+        # get model and deck
+        model = col.models.byName(data["model"])
+        if not data["deck"]:
+            deck_id = col.conf["curDeck"]
+        else:
+            deck_id = col.decks.id(data["deck"])
+
+        # make note
+        note = notes.Note(col, model=model)
+        note.did = deck_id
+        
+        # you can specify fewer fields if you want, but not *more*
+        if len(data["fields"]) > len(note.fields):
+            raise Exception("received too many fields")
+        for i, f in enumerate(data["fields"]):
+            note.fields[i] = f
+            
+        if data["tags"]:
+            for tag in data["tags"].split():
+                note.addTag(tag)
+
+        # add note
+        col.addNote(note)    
+        utils.tooltip("Note added.")
+
+def startAnkiServer(mw, port):
+    mw.ankiServer = AnkiServer(mw, port)
 
 startAnkiServer(mw, PORT)
