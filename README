@@ -1,0 +1,30 @@
+Send data to running Anki instance. Currently supports adding of notes.
+
+Example:
+
+    TCP_IP   = '127.0.0.1'
+    TCP_PORT = 49666
+
+    import json, socket
+
+    cmd = "addNote"
+    msg = {
+        "model": "Basic",
+        "deck": "meatgrinder",
+        "fields": ["muh", "kuh"],
+        "tags": "test",
+    }
+
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect((TCP_IP, TCP_PORT))
+    msg = {
+        "cmd": cmd,
+        "data": data,
+    }
+    s.send(json.dumps(msg))
+    # wait for confirmation
+    status = s.recv(1024)
+    if status != "OK":
+        raise Exception("Sending command to Anki failed somehow: %s" % status)
+    s.close()
+    
