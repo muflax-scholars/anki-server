@@ -70,7 +70,8 @@ class AnkiServer(object):
                 note.addTag(tag)
 
         # add note
-        col.addNote(note)    
+        col.addNote(note)
+        col.save()
         utils.tooltip("Note added.")
 
 def startAnkiServer(mw, port):
