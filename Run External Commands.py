@@ -11,6 +11,9 @@ import json
 
 from aqt import mw, utils
 from anki import notes, consts
+from anki.utils import fieldChecksum, splitFields
+
+# TODO split in multiple files
 
 PORT = 49666
 
@@ -39,10 +42,10 @@ class AnkiServer(object):
         cmd, data = msg["cmd"], msg["data"]
 
         # execute command
-        getattr(AnkiServer, cmd)(self, data)
-
-        # no error, so send ok back
-        self.sock.write(QtCore.QByteArray("OK"))
+        ret = getattr(AnkiServer, cmd)(self, data)
+        
+        # send back return code
+        self.sock.write(QtCore.QByteArray(json.dumps(ret)))
 
     def addNote(self, data):
         "Takes model, deck, fields, tags. If deck is missing, use current deck."
@@ -73,7 +76,37 @@ class AnkiServer(object):
         col.addNote(note)
         col.save()
         utils.tooltip("Note added.")
+        return True
 
+    def isDupe(self, data):
+        "Takes field, model and returns True if the field is a dupe and False otherwise."
+        # find any matching csums and compare
+        csum = fieldChecksum(data["field"])
+        mid = self.mw.col.models.byName(data["model"])["id"]
+        for flds in self.mw.col.db.list(
+                "select flds from notes where csum = ? and id != ? and mid = ?",
+                csum, 0, mid):
+            if splitFields(flds)[0] == data["field"]:
+                return True
+        return False
+
+    def models(self, data):
+        "Takes no info, returns list of all models as individual dicts."
+        return self.mw.col.models.all()
+
+    def modelByName(self, data):
+        "Takes name, returns model dict."
+        return self.mw.col.models.byName(data["name"])
+
+    def decks(self, data):
+        "Takes no info, returns list of all decks as individual dicts"
+        return self.mw.col.decks.all()
+
+    def deckByName(self, data):
+        "Takes name, returns deck dict."
+        return self.mw.col.decks.byName(data["name"])
+
+        
 def startAnkiServer(mw, port):
     mw.ankiServer = AnkiServer(mw, port)
 
