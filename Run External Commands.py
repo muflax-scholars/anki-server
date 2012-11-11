@@ -34,7 +34,7 @@ class AnkiServer(object):
 
     def parseCommand(self, txt):
         # parse cmd
-        print "received:", txt
+        # print "received:", txt
         msg = json.loads(txt)
         cmd, data = msg["cmd"], msg["data"]
 
