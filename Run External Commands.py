@@ -79,6 +79,11 @@ class AnkiServer(object):
         utils.tooltip("Note added.")
         return True
 
+    def addFile(self, data):
+        "Takes path, adds file to media dir."
+        # TODO assumes file is local, should allow alternatives
+        return self.col.media.addFile(data["path"])
+        
     def isDupe(self, data):
         "Takes field, model and returns True if the field is a dupe and False otherwise."
         # find any matching csums and compare
