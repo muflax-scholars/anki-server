@@ -12,18 +12,18 @@ import json
 from aqt import mw, utils
 from anki import notes, consts
 from anki.utils import fieldChecksum, splitFields
+from anki.hooks import addHook
 
 # TODO split in multiple files
 
 PORT = 49666
 
 class AnkiServer(object):
-    def __init__(self, mw, port):
-        self.mw = mw
+    def __init__(self, col):
+        self.col = col
         self.tcpServer = QtNetwork.QTcpServer()
-        self.tcpServer.listen(address=QtNetwork.QHostAddress.LocalHost, port=port)
-        QtCore.QObject.connect(self.tcpServer, QtCore.SIGNAL("newConnection()"),
-                               self.newConnectionArrives)
+        self.tcpServer.listen(address=QtNetwork.QHostAddress.LocalHost, port=PORT)
+        QtCore.QObject.connect(self.tcpServer, QtCore.SIGNAL("newConnection()"), self.newConnectionArrives)
 
     
     def newConnectionArrives(self):
@@ -39,7 +39,8 @@ class AnkiServer(object):
         # parse cmd
         # print "received:", txt
         msg = json.loads(txt)
-        cmd, data = msg["cmd"], msg["data"]
+        cmd = msg["cmd"]
+        data = msg.get("data", None)
 
         # execute command
         ret = getattr(AnkiServer, cmd)(self, data)
@@ -49,7 +50,7 @@ class AnkiServer(object):
 
     def addNote(self, data):
         "Takes model, deck, fields, tags. If deck is missing, use current deck."
-        col = self.mw.col
+        col = self.col
 
         # get model and deck
         model = col.models.byName(data["model"])
@@ -82,8 +83,8 @@ class AnkiServer(object):
         "Takes field, model and returns True if the field is a dupe and False otherwise."
         # find any matching csums and compare
         csum = fieldChecksum(data["field"])
-        mid = self.mw.col.models.byName(data["model"])["id"]
-        for flds in self.mw.col.db.list(
+        mid = self.col.models.byName(data["model"])["id"]
+        for flds in self.col.db.list(
                 "select flds from notes where csum = ? and id != ? and mid = ?",
                 csum, 0, mid):
             if splitFields(flds)[0] == data["field"]:
@@ -92,22 +93,28 @@ class AnkiServer(object):
 
     def models(self, data):
         "Takes no info, returns list of all models as individual dicts."
-        return self.mw.col.models.all()
+        return self.col.models.all()
 
     def modelByName(self, data):
         "Takes name, returns model dict."
-        return self.mw.col.models.byName(data["name"])
+        return self.col.models.byName(data["name"])
 
     def decks(self, data):
         "Takes no info, returns list of all decks as individual dicts"
-        return self.mw.col.decks.all()
+        return self.col.decks.all()
 
     def deckByName(self, data):
         "Takes name, returns deck dict."
-        return self.mw.col.decks.byName(data["name"])
+        return self.col.decks.byName(data["name"])
 
+    def tags(self, data):
+        "Takes no info, returns list of tags."
+        return self.col.tags.all()
         
-def startAnkiServer(mw, port):
-    mw.ankiServer = AnkiServer(mw, port)
+        
+def startAnkiServer():
+    print "starting API server..."
+    mw.ankiServer = AnkiServer(mw.col)
 
-startAnkiServer(mw, PORT)
+# wait until col is ready
+addHook("profileLoaded",  startAnkiServer)
