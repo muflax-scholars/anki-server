@@ -83,6 +83,10 @@ class AnkiServer(object):
         "Takes path, adds file to media dir."
         # TODO assumes file is local, should allow alternatives
         return self.col.media.addFile(data["path"])
+
+    def mediaDir(self, data):
+        "Takes no info, returns path to media dir."
+        return self.col.media.dir()
         
     def isDupe(self, data):
         "Takes field, model and returns True if the field is a dupe and False otherwise."
