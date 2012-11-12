@@ -52,6 +52,8 @@ class AnkiServer(object):
         "Takes model, deck, fields, tags. If deck is missing, use current deck."
         col = self.col
 
+        print "adding:", data
+        
         # get model and deck
         model = col.models.byName(data["model"])
         if not data["deck"]:
@@ -61,7 +63,7 @@ class AnkiServer(object):
 
         # make note
         note = notes.Note(col, model=model)
-        note.did = deck_id
+        note.model()["did"] = deck_id        
         
         # you can specify fewer fields if you want, but not *more*
         if len(data["fields"]) > len(note.fields):
