@@ -19,8 +19,7 @@ from anki.hooks import addHook
 PORT = 49666
 
 class AnkiServer(object):
-    def __init__(self, col):
-        self.col = col
+    def __init__(self):
         self.tcpServer = QtNetwork.QTcpServer()
         self.tcpServer.listen(address=QtNetwork.QHostAddress.LocalHost, port=PORT)
         QtCore.QObject.connect(self.tcpServer, QtCore.SIGNAL("newConnection()"), self.newConnectionArrives)
@@ -50,7 +49,7 @@ class AnkiServer(object):
 
     def addNote(self, data):
         "Takes model, deck, fields, tags. If deck is missing, use current deck."
-        col = self.col
+        col = mw.col
 
         print "adding:", data
         
@@ -84,18 +83,18 @@ class AnkiServer(object):
     def addFile(self, data):
         "Takes path, adds file to media dir."
         # TODO assumes file is local, should allow alternatives
-        return self.col.media.addFile(data["path"])
+        return mw.col.media.addFile(data["path"])
 
     def mediaDir(self, data):
         "Takes no info, returns path to media dir."
-        return self.col.media.dir()
+        return mw.col.media.dir()
         
     def isDupe(self, data):
         "Takes field, model and returns True if the field is a dupe and False otherwise."
         # find any matching csums and compare
         csum = fieldChecksum(data["field"])
-        mid = self.col.models.byName(data["model"])["id"]
-        for flds in self.col.db.list(
+        mid = mw.col.models.byName(data["model"])["id"]
+        for flds in mw.col.db.list(
                 "select flds from notes where csum = ? and id != ? and mid = ?",
                 csum, 0, mid):
             if splitFields(flds)[0] == data["field"]:
@@ -104,28 +103,28 @@ class AnkiServer(object):
 
     def models(self, data):
         "Takes no info, returns list of all models as individual dicts."
-        return self.col.models.all()
+        return mw.col.models.all()
 
     def modelByName(self, data):
         "Takes name, returns model dict."
-        return self.col.models.byName(data["name"])
+        return mw.col.models.byName(data["name"])
 
     def decks(self, data):
         "Takes no info, returns list of all decks as individual dicts"
-        return self.col.decks.all()
+        return mw.col.decks.all()
 
     def deckByName(self, data):
         "Takes name, returns deck dict."
-        return self.col.decks.byName(data["name"])
+        return mw.col.decks.byName(data["name"])
 
     def tags(self, data):
         "Takes no info, returns list of tags."
-        return self.col.tags.all()
+        return mw.col.tags.all()
         
         
 def startAnkiServer():
     print "starting API server..."
-    mw.ankiServer = AnkiServer(mw.col)
+    mw.ankiServer = AnkiServer()
 
 # wait until col is ready
 addHook("profileLoaded",  startAnkiServer)
